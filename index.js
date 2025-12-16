@@ -5,7 +5,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
-// Import słów
+// Upewnij się, że masz plik words.js w tym samym folderze!
 const categoriesDB = require("./words");
 
 app.use(express.static("public"));
@@ -300,7 +300,7 @@ io.on("connection", (socket) => {
         }
 
         const ejected = room.players.find((p) => p.id === winner);
-        const impostor = room.players.find((p) => p.role === "impostor");
+        // const impostor = room.players.find((p) => p.role === "impostor"); // (nieużywane w tej logice, ale zostawiam dla jasności)
 
         if (ejected.role === "impostor")
             finishGame(room, {
@@ -311,13 +311,20 @@ io.on("connection", (socket) => {
         else
             finishGame(room, {
                 winner: "IMPOSTOR",
-                msg: `Wyrzucono niewinnego (${ejected.name}).`,
+                msg: `Wyrzucono niewinnego: ${ejected.name}.`,
                 secretWord: room.gameState.currentWord,
             });
     }
 
-    // --- ZMIANA: Czas oczekiwania 9000ms (9s) ---
+    // --- KONIEC GRY (ZMODYFIKOWANE) ---
     function finishGame(room, data) {
+        // 1. Znajdź impostora, żeby wysłać jego nick
+        const impostorPlayer = room.players.find((p) => p.role === "impostor");
+        const impostorName = impostorPlayer ? impostorPlayer.name : "Nieznany";
+
+        // 2. Dodaj nick do danych wysyłanych do klientów
+        data.impostorName = impostorName;
+
         io.to(room.name).emit("gameOver", data);
         setTimeout(() => {
             if (rooms[room.name]) {
