@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="pl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Impostor Game</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap"
+            rel="stylesheet"
+        />
+
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: "Poppins", sans-serif;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+
+            .app-container {
+                width: 100%;
+                max-width: 450px;
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                padding: 30px;
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                text-align: center;
+                position: relative;
+                z-index: 1;
+            }
+
+            .screen {
+                display: none;
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            .active {
+                display: block;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            h1 {
+                font-size: 2.5rem;
+                margin-bottom: 10px;
+                color: #e94560;
+                text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+            }
+            h2 {
+                font-size: 1.5rem;
+                margin-bottom: 20px;
+                color: #ddd;
+            }
+
+            input[type="text"] {
+                width: 100%;
+                padding: 15px;
+                margin-bottom: 10px;
+                border-radius: 10px;
+                background: rgba(0, 0, 0, 0.3);
+                color: white;
+                border: none;
+                text-align: center;
+                font-size: 16px;
+                outline: none;
+                border: 2px solid transparent;
+                transition: 0.3s;
+            }
+            input[type="text"]:focus {
+                border-color: #e94560;
+                background: rgba(0, 0, 0, 0.5);
+            }
+
+            button {
+                width: 100%;
+                padding: 15px;
+                font-size: 16px;
+                font-weight: 600;
+                border-radius: 50px;
+                background: #e94560;
+                color: white;
+                border: none;
+                cursor: pointer;
+                margin-top: 10px;
+                transition: 0.3s;
+            }
+            button:hover {
+                background: #ff5c75;
+                transform: translateY(-2px);
+            }
+            .secondary-btn {
+                background: transparent;
+                border: 2px solid #0f3460;
+            }
+            .secondary-btn:hover {
+                background: #0f3460;
+            }
+
+            .avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                margin-right: 10px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background: #222;
+            }
+            .player-row {
+                display: flex;
+                align-items: center;
+                width: 100%;
+            }
+            ul {
+                list-style: none;
+                margin-bottom: 20px;
+            }
+            li {
+                background: rgba(255, 255, 255, 0.05);
+                margin: 8px 0;
+                padding: 10px;
+                border-radius: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .kick-btn {
+                width: 25px;
+                height: 25px;
+                background: rgba(255, 77, 77, 0.2);
+                color: #ff4d4d;
+                border-radius: 5px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                border: none;
+            }
+
+            /* MODAL */
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 9999;
+                left: 0;
+                top: 0;
+                width: 100vw;
+                height: 100vh;
+                overflow: auto;
+                background-color: rgba(0, 0, 0, 0.85);
+                backdrop-filter: blur(5px);
+                animation: fadeIn 0.3s;
+            }
+            .modal-content {
+                background: #16213e;
+                margin: 5vh auto;
+                padding: 30px;
+                border: 2px solid #e94560;
+                width: 90%;
+                max-width: 500px;
+                border-radius: 20px;
+                color: white;
+                text-align: center;
+                box-shadow: 0 0 50px rgba(233, 69, 96, 0.3);
+                position: relative;
+            }
+            .close-modal {
+                color: #aaa;
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                font-size: 30px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: 0.3s;
+            }
+            .close-modal:hover {
+                color: white;
+                transform: scale(1.1);
+            }
+            #cat-list {
+                text-align: left;
+                max-height: 50vh;
+                overflow-y: auto;
+                margin-top: 15px;
+                padding-right: 5px;
+            }
+
+            .switch-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            .switch {
+                position: relative;
+                display: inline-block;
+                width: 50px;
+                height: 26px;
+            }
+            .switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #444;
+                transition: 0.4s;
+                border-radius: 34px;
+            }
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 20px;
+                width: 20px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: 0.4s;
+                border-radius: 50%;
+            }
+            input:checked + .slider {
+                background-color: #e94560;
+            }
+            input:checked + .slider:before {
+                transform: translateX(24px);
+            }
+            .cat-label {
+                font-size: 16px;
+                font-weight: 500;
+                margin-left: 10px;
+            }
+
+            .role-box {
+                background: rgba(0, 0, 0, 0.3);
+                padding: 20px;
+                border-radius: 15px;
+                margin-bottom: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .turn-box {
+                background: rgba(15, 52, 96, 0.6);
+                padding: 20px;
+                border-radius: 15px;
+                border: 1px solid #e94560;
+                margin-top: 20px;
+            }
+            .guess-area {
+                margin-top: 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 15px;
+                display: none;
+            }
+            .guess-btn-style {
+                background: #8e44ad;
+            }
+            .hidden {
+                display: none;
+            }
+
+            #btn-settings {
+                background: #333;
+                margin-bottom: 10px;
+                border: 1px solid #555;
+            }
+            #btn-settings:hover {
+                background: #444;
+            }
+
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #e94560;
+                border-radius: 10px;
+            }
+            ::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.1);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="app-container">
+            <div id="screen-menu" class="screen active">
+                <h1>🕵️ Impostor</h1>
+                <input type="text" id="nickname" placeholder="Twój nick..." />
+                <div id="menu-actions">
+                    <button onclick="showCreate()">Stwórz Pokój</button>
+                    <button class="secondary-btn" onclick="showJoin()">
+                        Dołącz
+                    </button>
+                </div>
+                <div id="form-create" class="hidden">
+                    <input type="text" id="c-name" placeholder="Nazwa Pokoju" />
+                    <input type="text" id="c-pass" placeholder="Hasło" />
+                    <button onclick="createRoom()">Start</button>
+                    <button class="secondary-btn" onclick="resetMenu()">
+                        Wróć
+                    </button>
+                </div>
+                <div id="form-join" class="hidden">
+                    <input type="text" id="j-name" placeholder="Nazwa Pokoju" />
+                    <input type="text" id="j-pass" placeholder="Hasło" />
+                    <button onclick="joinRoom()">Start</button>
+                    <button class="secondary-btn" onclick="resetMenu()">
+                        Wróć
+                    </button>
+                </div>
+            </div>
+
+            <div id="screen-lobby" class="screen">
+                <h2 id="lobby-title">Lobby</h2>
+                <ul id="player-list"></ul>
+
+                <div style="min-height: 60px">
+                    <div id="host-buttons" style="display: none">
+                        <button id="btn-settings" onclick="openSettings()">
+                            ⚙️ Ustawienia Gry
+                        </button>
+                        <button id="btn-start-game" onclick="startGame()">
+                            START GRY 👑
+                        </button>
+                    </div>
+                    <p
+                        id="waiting-for-host"
+                        style="font-size: 14px; margin-top: 15px"
+                    >
+                        Czekamy na hosta...
+                    </p>
+                </div>
+                <button class="secondary-btn" onclick="location.reload()">
+                    Wyjdź
+                </button>
+            </div>
+
+            <div id="screen-game" class="screen">
+                <h2
+                    id="role-header"
+                    style="
+                        font-size: 2.5rem;
+                        font-weight: 800;
+                        margin-bottom: 20px;
+                    "
+                ></h2>
+                <div class="role-box"><div id="role-content"></div></div>
+
+                <div class="turn-box">
+                    <p style="font-size: 12px; color: #aaa">MÓWI TERAZ:</p>
+                    <img
+                        id="speaker-avatar"
+                        class="avatar"
+                        src=""
+                        style="
+                            width: 60px;
+                            height: 60px;
+                            margin: 10px auto;
+                            display: block;
+                        "
+                    />
+                    <div
+                        id="speaker-name"
+                        style="
+                            font-size: 20px;
+                            font-weight: bold;
+                            color: #e94560;
+                        "
+                    >
+                        ...
+                    </div>
+                    <button
+                        id="btn-next-turn"
+                        onclick="nextTurn()"
+                        style="display: none; margin-top: 15px"
+                    >
+                        KONIEC TURY
+                    </button>
+                </div>
+
+                <div id="game-guess-area" class="guess-area">
+                    <input
+                        type="text"
+                        id="guess-input-game"
+                        placeholder="Zgadnij hasło..."
+                    />
+                    <button class="guess-btn-style" onclick="guessWord('game')">
+                        ZGADNIJ
+                    </button>
+                    <p style="font-size: 10px; color: #aaa">
+                        Błąd = Przegrana!
+                    </p>
+                </div>
+                <button
+                    id="force-end-btn"
+                    onclick="forceEnd()"
+                    style="background: #c0392b; margin-top: 20px; display: none"
+                >
+                    Zakończ grę
+                </button>
+            </div>
+
+            <div id="screen-voting" class="screen">
+                <h2>🚨 GŁOSOWANIE</h2>
+                <div id="voting-buttons"></div>
+                <div id="voting-guess-area" class="guess-area">
+                    <input
+                        type="text"
+                        id="guess-input-voting"
+                        placeholder="Ostatnia szansa..."
+                    />
+                    <button
+                        class="guess-btn-style"
+                        onclick="guessWord('voting')"
+                    >
+                        ZGADNIJ
+                    </button>
+                </div>
+                <button class="secondary-btn" onclick="sendVote('SKIP')">
+                    POMIŃ
+                </button>
+                <p
+                    id="vote-status"
+                    style="color: #f1c40f; margin-top: 10px"
+                ></p>
+            </div>
+
+            <div id="screen-result" class="screen">
+                <h1 id="result-title" style="text-transform: uppercase"></h1>
+                <p id="result-msg"></p>
+                <div
+                    style="
+                        background: rgba(255, 255, 255, 0.1);
+                        padding: 10px;
+                        border-radius: 10px;
+                        margin-top: 20px;
+                    "
+                >
+                    <p style="font-size: 10px">HASŁO:</p>
+                    <h2
+                        id="result-secret"
+                        style="color: #e94560; margin: 0"
+                    ></h2>
+                </div>
+                <p style="font-size: 10px; margin-top: 20px">Powrót za 9s...</p>
+            </div>
+        </div>
+
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeSettings()"
+                    >&times;</span
+                >
+                <h3 style="color: #e94560; margin-bottom: 20px">
+                    Wybierz Kategorie
+                </h3>
+                <div id="cat-list"></div>
+                <button onclick="closeSettings()" style="margin-top: 20px">
+                    Zapisz i Zamknij
+                </button>
+            </div>
+        </div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+            const screens = {
+                menu: document.getElementById("screen-menu"),
+                lobby: document.getElementById("screen-lobby"),
+                game: document.getElementById("screen-game"),
+                voting: document.getElementById("screen-voting"),
+                result: document.getElementById("screen-result"),
+            };
+            let myId = null;
+            let myRole = null;
+
+            function showScreen(name) {
+                Object.values(screens).forEach((s) =>
+                    s.classList.remove("active"),
+                );
+                screens[name].classList.add("active");
+            }
+            function resetMenu() {
+                document
+                    .getElementById("menu-actions")
+                    .classList.remove("hidden");
+                document.getElementById("form-create").classList.add("hidden");
+                document.getElementById("form-join").classList.add("hidden");
+            }
+            function showCreate() {
+                document.getElementById("menu-actions").classList.add("hidden");
+                document
+                    .getElementById("form-create")
+                    .classList.remove("hidden");
+            }
+            function showJoin() {
+                document.getElementById("menu-actions").classList.add("hidden");
+                document.getElementById("form-join").classList.remove("hidden");
+            }
+            function getAvatar(name) {
+                return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${name}`;
+            }
+
+            function openSettings() {
+                document.getElementById("settings-modal").style.display =
+                    "block";
+            }
+            function closeSettings() {
+                document.getElementById("settings-modal").style.display =
+                    "none";
+            }
+            window.onclick = function (event) {
+                if (event.target == document.getElementById("settings-modal"))
+                    closeSettings();
+            };
+
+            function getNick() {
+                const v = document.getElementById("nickname").value.trim();
+                if (!v) alert("Podaj nick!");
+                return v;
+            }
+            function createRoom() {
+                const n = getNick();
+                if (n)
+                    socket.emit("createRoom", {
+                        nickname: n,
+                        roomName: document
+                            .getElementById("c-name")
+                            .value.trim(),
+                        password: document
+                            .getElementById("c-pass")
+                            .value.trim(),
+                    });
+            }
+            function joinRoom() {
+                const n = getNick();
+                if (n)
+                    socket.emit("joinRoom", {
+                        nickname: n,
+                        roomName: document
+                            .getElementById("j-name")
+                            .value.trim(),
+                        password: document
+                            .getElementById("j-pass")
+                            .value.trim(),
+                    });
+            }
+
+            function startGame() {
+                const checkboxes = document.querySelectorAll(
+                    ".cat-checkbox:checked",
+                );
+                if (checkboxes.length === 0) {
+                    alert("Zaznacz min. 1 kategorię w Ustawieniach!");
+                    openSettings();
+                    return;
+                }
+                const selected = Array.from(checkboxes).map((cb) => cb.value);
+                socket.emit("startGame", selected);
+            }
+
+            function nextTurn() {
+                socket.emit("nextTurn");
+            }
+            function sendVote(id) {
+                socket.emit("vote", id);
+                document.getElementById("voting-buttons").innerHTML =
+                    "<p>Głos oddany.</p>";
+            }
+            function guessWord(src) {
+                const val = document
+                    .getElementById(
+                        src === "voting"
+                            ? "guess-input-voting"
+                            : "guess-input-game",
+                    )
+                    .value.trim();
+                if (val) socket.emit("guessWord", val);
+            }
+            function kickPlayer(id) {
+                if (confirm("Wyrzucić?")) socket.emit("kickPlayer", id);
+            }
+            function forceEnd() {
+                if (confirm("Zakończyć?")) socket.emit("forceEndGame");
+            }
+            function resetUI() {
+                document
+                    .querySelectorAll(".guess-area input, .guess-area button")
+                    .forEach((e) => (e.disabled = false));
+                document
+                    .querySelectorAll(".guess-area p:last-child")
+                    .forEach((p) => {
+                        p.innerText = "Błąd = Przegrana!";
+                        p.style.color = "#aaa";
+                    });
+            }
+
+            socket.on("connect", () => (myId = socket.id));
+            socket.on("errorMsg", alert);
+            socket.on("joinedLobby", () => showScreen("lobby"));
+            socket.on("kicked", () => {
+                alert("Wyrzucono Cię!");
+                location.reload();
+            });
+
+            socket.on("updateRoom", (data) => {
+                document.getElementById("lobby-title").innerText =
+                    data.roomName;
+                const list = document.getElementById("player-list");
+                list.innerHTML = "";
+                const isHost = data.hostId === myId;
+
+                if (isHost && !data.gameActive) {
+                    document.getElementById("host-buttons").style.display =
+                        "block";
+                    document.getElementById("waiting-for-host").style.display =
+                        "none";
+
+                    const catList = document.getElementById("cat-list");
+                    if (
+                        data.availableCategories &&
+                        catList.innerHTML.trim() === ""
+                    ) {
+                        data.availableCategories.forEach((cat) => {
+                            catList.innerHTML += `
+                            <div class="switch-container">
+                                <span class="cat-label">${cat}</span>
+                                <label class="switch">
+                                    <input type="checkbox" class="cat-checkbox" value="${cat}" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        `;
+                        });
+                    }
+                } else {
+                    document.getElementById("host-buttons").style.display =
+                        "none";
+                    document.getElementById("waiting-for-host").style.display =
+                        data.gameActive ? "none" : "block";
+                    closeSettings();
+                }
+
+                data.players.forEach((p) => {
+                    let kick =
+                        isHost && p.id !== myId
+                            ? `<button class="kick-btn" onclick="kickPlayer('${p.id}')">✕</button>`
+                            : "";
+                    list.innerHTML += `<li><div class="player-row"><img src="${getAvatar(p.name)}" class="avatar"> ${p.name} ${p.id === data.hostId ? "👑" : ""}</div>${kick}</li>`;
+                });
+            });
+
+            socket.on("gameStarted", (data) => {
+                showScreen("game");
+                resetUI();
+                myRole = data.role;
+                const h = document.getElementById("role-header");
+                const c = document.getElementById("role-content");
+                const g = document.getElementById("game-guess-area");
+
+                document.getElementById("force-end-btn").style.display =
+                    data.hostId === myId ? "block" : "none";
+
+                if (data.role === "impostor") {
+                    h.innerText = "IMPOSTOR";
+                    h.style.color = "#ff4d4d";
+                    c.innerHTML = "<p>Nie znasz słowa. Blefuj!</p>";
+                    g.style.display = "block";
+                } else {
+                    h.innerText = "CYWIL";
+                    h.style.color = "#4dff88";
+                    c.innerHTML = `<p>HASŁO:</p><div style="font-size:24px; font-weight:bold;">${data.word}</div>`;
+                    g.style.display = "none";
+                }
+            });
+
+            socket.on("updateTurn", (p) => {
+                const el = document.getElementById("speaker-name");
+                document.getElementById("speaker-avatar").src = getAvatar(
+                    p.name,
+                );
+                if (p.id === myId) {
+                    el.innerHTML = `${p.name} (TY)`;
+                    document.getElementById("btn-next-turn").style.display =
+                        "block";
+                } else {
+                    el.innerHTML = p.name;
+                    document.getElementById("btn-next-turn").style.display =
+                        "none";
+                }
+            });
+
+            socket.on("startVoting", (players) => {
+                showScreen("voting");
+                const box = document.getElementById("voting-buttons");
+                box.innerHTML = "";
+                document.getElementById("vote-status").innerText = "";
+
+                const vg = document.getElementById("voting-guess-area");
+                vg.style.display = myRole === "impostor" ? "block" : "none";
+
+                players.forEach((p) => {
+                    let btn = document.createElement("button");
+                    btn.innerHTML = `<div style="display:flex; align-items:center; justify-content:center;"><img src="${getAvatar(p.name)}" style="width:20px; height:20px; border-radius:50%; margin-right:5px;"> ${p.name}</div>`;
+                    btn.onclick = () => sendVote(p.id);
+                    box.appendChild(btn);
+                });
+            });
+
+            socket.on("guessLocked", (msg) => {
+                alert(msg);
+                document
+                    .querySelectorAll(".guess-area input, .guess-area button")
+                    .forEach((e) => (e.disabled = true));
+                document
+                    .querySelectorAll(".guess-area p:last-child")
+                    .forEach((p) => {
+                        p.innerText = "ZABLOKOWANE!";
+                        p.style.color = "red";
+                    });
+            });
+
+            socket.on("votingResult", (d) => {
+                if (d.result === "skip") {
+                    document.getElementById("vote-status").innerText =
+                        "SKIP. Dalej...";
+                    resetUI();
+                }
+            });
+
+            // --- NAPRAWA BŁĘDU SKIPOWANIA ---
+            socket.on("resumeGame", (player) => {
+                showScreen("game");
+                // Musimy zaktualizować UI, żeby pokazać czyja tura
+                const el = document.getElementById("speaker-name");
+                document.getElementById("speaker-avatar").src = getAvatar(
+                    player.name,
+                );
+
+                if (player.id === myId) {
+                    el.innerHTML = `${player.name} (TY)`;
+                    document.getElementById("btn-next-turn").style.display =
+                        "block";
+                } else {
+                    el.innerHTML = player.name;
+                    document.getElementById("btn-next-turn").style.display =
+                        "none";
+                }
+            });
+
+            socket.on("gameOver", (d) => {
+                showScreen("result");
+                const t = document.getElementById("result-title");
+
+                if (d.winner === "CIVILIANS") {
+                    t.innerHTML =
+                        "<span style='color:#4dff88'>WYGRALI CYWILE</span>";
+                } else {
+                    t.innerHTML =
+                        "<span style='color:#ff4d4d'>WYGRAŁ IMPOSTOR</span>";
+                }
+
+                document.getElementById("result-msg").innerText = d.msg;
+                document.getElementById("result-secret").innerText =
+                    d.secretWord;
+            });
+
+            socket.on("returnToLobby", () => {
+                showScreen("lobby");
+                document.getElementById("voting-buttons").innerHTML = "";
+            });
+            socket.on("gameReset", (msg) => {
+                alert(msg);
+                showScreen("lobby");
+            });
+        </script>
+    </body>
+</html>
