@@ -32,6 +32,82 @@
                 padding: 20px;
             }
 
+            /* --- STYL IKOΝKI POMOCY (?) --- */
+            .help-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000; /* Zawsze na wierzchu */
+            }
+            .help-icon {
+                width: 45px;
+                height: 45px;
+                background: #e94560;
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 800;
+                font-size: 24px;
+                cursor: help;
+                box-shadow: 0 0 15px rgba(233, 69, 96, 0.6);
+                transition: transform 0.2s;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+            }
+            .help-icon:hover {
+                transform: scale(1.1);
+                background: #ff5c75;
+            }
+            /* Dymek z zasadami */
+            .help-tooltip {
+                display: none; /* Domyślnie ukryty */
+                position: absolute;
+                top: 60px;
+                right: 0;
+                width: 320px;
+                background: rgba(22, 33, 62, 0.95);
+                backdrop-filter: blur(10px);
+                border: 2px solid #e94560;
+                padding: 20px;
+                border-radius: 15px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+                color: #ddd;
+                font-size: 14px;
+                text-align: left;
+                line-height: 1.5;
+            }
+            /* Pokazanie dymka po najechaniu na kontener */
+            .help-container:hover .help-tooltip {
+                display: block;
+                animation: fadeIn 0.3s ease-in-out;
+            }
+            .help-tooltip h3 {
+                color: #e94560;
+                margin-bottom: 10px;
+                font-size: 18px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding-bottom: 5px;
+            }
+            .help-tooltip ul {
+                padding-left: 20px;
+                list-style-type: disc;
+                margin-bottom: 0;
+            }
+            /* Reset stylów listy dla tooltipa (żeby nie brał stylów z lobby) */
+            .help-tooltip li {
+                background: transparent;
+                padding: 0;
+                margin: 5px 0;
+                border-radius: 0;
+                display: list-item;
+                justify-content: flex-start;
+            }
+            .help-tooltip strong {
+                color: white;
+            }
+
+            /* --- RESZTA STYLÓW APLIKACJI --- */
             .app-container {
                 width: 100%;
                 max-width: 450px;
@@ -138,7 +214,8 @@
                 list-style: none;
                 margin-bottom: 20px;
             }
-            li {
+            /* Style listy w lobby */
+            #player-list li {
                 background: rgba(255, 255, 255, 0.05);
                 margin: 8px 0;
                 padding: 10px;
@@ -311,6 +388,37 @@
         </style>
     </head>
     <body>
+        <div class="help-container">
+            <div class="help-icon">?</div>
+            <div class="help-tooltip">
+                <h3>📜 Zasady Gry</h3>
+                <ul>
+                    <li>
+                        <strong>Cel:</strong> Wszyscy dostają to samo hasło,
+                        oprócz <strong>Impostora</strong>, który nic nie wie.
+                    </li>
+                    <li>
+                        <strong>Cywile:</strong> Muszą odkryć, kto jest
+                        Impostorem, podając niejednoznaczne synonimy, tak aby
+                        nie zdradzić hasła.
+                    </li>
+                    <li>
+                        <strong>Impostor:</strong> Musi udawać, że zna hasło,
+                        aby przetrwać, lub spróbować je zgadnąć.
+                    </li>
+                    <li>
+                        <strong>Tury:</strong> Gracze po kolei opowiadają o
+                        haśle.
+                    </li>
+                    <li>
+                        <strong>Koniec:</strong> Gra kończy się głosowaniem
+                        (wyrzuceniem kogoś) lub gdy Impostor poprawnie lub
+                        niepoprawnie zgadnie hasło.
+                    </li>
+                </ul>
+            </div>
+        </div>
+
         <div class="app-container">
             <div id="screen-menu" class="screen active">
                 <h1>🕵️ Impostor</h1>
@@ -781,7 +889,6 @@
                 }
             });
 
-            // --- NOWOŚĆ: WYŚWIETLANIE IMPOSTORA ---
             socket.on("gameOver", (d) => {
                 showScreen("result");
                 const t = document.getElementById("result-title");
@@ -790,12 +897,10 @@
                 if (d.winner === "CIVILIANS") {
                     t.innerHTML =
                         "<span style='color:#4dff88'>WYGRALI CYWILE</span>";
-                    // Wyświetl impostora
                     impostorElem.innerText = `Impostorem był: ${d.impostorName}`;
                 } else {
                     t.innerHTML =
                         "<span style='color:#ff4d4d'>WYGRAŁ IMPOSTOR</span>";
-                    // Opcjonalnie: też możesz wyświetlić impostora, żeby potwierdzić
                     impostorElem.innerText = `Impostorem był: ${d.impostorName}`;
                 }
 
