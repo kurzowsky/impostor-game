@@ -32,12 +32,83 @@
                 padding: 20px;
             }
 
+            /* --- STOPKA Z AUTOREM --- */
+            .footer-credits {
+                position: fixed;
+                bottom: 15px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.3);
+                text-align: center;
+                z-index: 10;
+                pointer-events: none;
+            }
+            .footer-credits span {
+                color: #e94560;
+                font-weight: 600;
+            }
+
+            /* --- SYSTEM POWIADOMIEŃ (TOASTY) --- */
+            #notification-container {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 20000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                width: 90%;
+                max-width: 400px;
+                pointer-events: none;
+            }
+            .custom-notification {
+                background: rgba(22, 33, 62, 0.95);
+                border-left: 5px solid;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+                animation: slideDown 0.4s ease-out;
+                font-weight: 500;
+                text-align: left;
+                pointer-events: auto;
+                display: flex;
+                align-items: center;
+                backdrop-filter: blur(5px);
+            }
+            .notif-error {
+                border-color: #ff4d4d;
+                border: 2px solid #ff4d4d;
+            }
+            .notif-success {
+                border-color: #4dff88;
+                border: 2px solid #4dff88;
+            }
+            @keyframes slideDown {
+                from {
+                    transform: translateY(-50px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes fadeOut {
+                to {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+            }
+
             /* --- STYL IKOΝKI POMOCY (?) --- */
             .help-container {
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                z-index: 10000; /* Zawsze na wierzchu */
+                z-index: 10000;
             }
             .help-icon {
                 width: 45px;
@@ -59,9 +130,8 @@
                 transform: scale(1.1);
                 background: #ff5c75;
             }
-            /* Dymek z zasadami */
             .help-tooltip {
-                display: none; /* Domyślnie ukryty */
+                display: none;
                 position: absolute;
                 top: 60px;
                 right: 0;
@@ -77,7 +147,6 @@
                 text-align: left;
                 line-height: 1.5;
             }
-            /* Pokazanie dymka po najechaniu na kontener */
             .help-container:hover .help-tooltip {
                 display: block;
                 animation: fadeIn 0.3s ease-in-out;
@@ -94,7 +163,6 @@
                 list-style-type: disc;
                 margin-bottom: 0;
             }
-            /* Reset stylów listy dla tooltipa (żeby nie brał stylów z lobby) */
             .help-tooltip li {
                 background: transparent;
                 padding: 0;
@@ -107,7 +175,7 @@
                 color: white;
             }
 
-            /* --- RESZTA STYLÓW APLIKACJI --- */
+            /* --- GŁÓWNY KONTENER --- */
             .app-container {
                 width: 100%;
                 max-width: 450px;
@@ -153,7 +221,6 @@
                 color: #ddd;
             }
 
-            /* --- ZMIANA: Dodano obsługę input[type="password"] w stylach --- */
             input[type="text"],
             input[type="password"] {
                 width: 100%;
@@ -217,7 +284,6 @@
                 list-style: none;
                 margin-bottom: 20px;
             }
-            /* Style listy w lobby */
             #player-list li {
                 background: rgba(255, 255, 255, 0.05);
                 margin: 8px 0;
@@ -241,7 +307,7 @@
                 border: none;
             }
 
-            /* MODAL */
+            /* --- MODALE --- */
             .modal {
                 display: none;
                 position: fixed;
@@ -257,11 +323,11 @@
             }
             .modal-content {
                 background: #16213e;
-                margin: 5vh auto;
+                margin: 15vh auto;
                 padding: 30px;
                 border: 2px solid #e94560;
                 width: 90%;
-                max-width: 500px;
+                max-width: 450px;
                 border-radius: 20px;
                 color: white;
                 text-align: center;
@@ -282,6 +348,19 @@
                 color: white;
                 transform: scale(1.1);
             }
+            .confirm-actions {
+                display: flex;
+                gap: 15px;
+                margin-top: 20px;
+            }
+            .confirm-yes {
+                background: #e94560;
+            }
+            .confirm-no {
+                background: transparent;
+                border: 2px solid #aaa;
+            }
+
             #cat-list {
                 text-align: left;
                 max-height: 50vh;
@@ -391,6 +470,8 @@
         </style>
     </head>
     <body>
+        <div id="notification-container"></div>
+
         <div class="help-container">
             <div class="help-icon">?</div>
             <div class="help-tooltip">
@@ -432,7 +513,11 @@
                 </div>
                 <div id="form-create" class="hidden">
                     <input type="text" id="c-name" placeholder="Nazwa Pokoju" />
-                    <input type="password" id="c-pass" placeholder="Hasło" />
+                    <input
+                        type="password"
+                        id="c-pass"
+                        placeholder="Hasło (opcjonalne)"
+                    />
                     <button onclick="createRoom()">Utwórz Pokój</button>
                     <button class="secondary-btn" onclick="resetMenu()">
                         Wróć
@@ -566,12 +651,10 @@
             <div id="screen-result" class="screen">
                 <h1 id="result-title" style="text-transform: uppercase"></h1>
                 <p id="result-msg"></p>
-
                 <h3
                     id="result-impostor"
                     style="color: #ff4d4d; margin-top: 15px; font-weight: 600"
                 ></h3>
-
                 <div
                     style="
                         background: rgba(255, 255, 255, 0.1);
@@ -590,6 +673,10 @@
             </div>
         </div>
 
+        <div class="footer-credits">
+            Stworzone przez <span>Jakub Gałdyn</span>
+        </div>
+
         <div id="settings-modal" class="modal">
             <div class="modal-content">
                 <span class="close-modal" onclick="closeSettings()"
@@ -605,6 +692,28 @@
             </div>
         </div>
 
+        <div id="confirm-modal" class="modal">
+            <div
+                class="modal-content"
+                style="max-width: 400px; padding-top: 40px"
+            >
+                <h3
+                    id="confirm-text"
+                    style="color: white; margin-bottom: 20px; font-size: 1.2rem"
+                >
+                    Czy na pewno?
+                </h3>
+                <div class="confirm-actions">
+                    <button id="confirm-yes-btn" class="confirm-yes">
+                        TAK
+                    </button>
+                    <button onclick="closeConfirm()" class="confirm-no">
+                        ANULUJ
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <script src="/socket.io/socket.io.js"></script>
         <script>
             const socket = io();
@@ -617,6 +726,37 @@
             };
             let myId = null;
             let myRole = null;
+            let pendingConfirmAction = null;
+
+            function showNotification(msg, type = "error") {
+                const container = document.getElementById(
+                    "notification-container",
+                );
+                const notif = document.createElement("div");
+                notif.className = `custom-notification ${type === "success" ? "notif-success" : "notif-error"}`;
+                const icon = type === "success" ? "✅" : "⚠️";
+                notif.innerHTML = `<span style="margin-right: 10px; font-size: 1.2em;">${icon}</span> <span>${msg}</span>`;
+                container.appendChild(notif);
+                setTimeout(() => {
+                    notif.style.animation = "fadeOut 0.4s forwards";
+                    setTimeout(() => notif.remove(), 400);
+                }, 4000);
+            }
+
+            function showConfirm(text, callback) {
+                document.getElementById("confirm-text").innerText = text;
+                document.getElementById("confirm-modal").style.display =
+                    "block";
+                pendingConfirmAction = callback;
+            }
+            function closeConfirm() {
+                document.getElementById("confirm-modal").style.display = "none";
+                pendingConfirmAction = null;
+            }
+            document.getElementById("confirm-yes-btn").onclick = function () {
+                if (pendingConfirmAction) pendingConfirmAction();
+                closeConfirm();
+            };
 
             function showScreen(name) {
                 Object.values(screens).forEach((s) =>
@@ -653,14 +793,20 @@
                 document.getElementById("settings-modal").style.display =
                     "none";
             }
+
             window.onclick = function (event) {
                 if (event.target == document.getElementById("settings-modal"))
                     closeSettings();
+                if (event.target == document.getElementById("confirm-modal"))
+                    closeConfirm();
             };
 
             function getNick() {
                 const v = document.getElementById("nickname").value.trim();
-                if (!v) alert("Podaj nick!");
+                if (!v) {
+                    showNotification("Musisz wpisać nick!", "error");
+                    return null;
+                }
                 return v;
             }
             function createRoom() {
@@ -695,7 +841,10 @@
                     ".cat-checkbox:checked",
                 );
                 if (checkboxes.length === 0) {
-                    alert("Zaznacz min. 1 kategorię w Ustawieniach!");
+                    showNotification(
+                        "Zaznacz min. 1 kategorię w Ustawieniach!",
+                        "error",
+                    );
                     openSettings();
                     return;
                 }
@@ -708,8 +857,9 @@
             }
             function sendVote(id) {
                 socket.emit("vote", id);
+                // Ukryj przyciski, ale zostaw status widoczny
                 document.getElementById("voting-buttons").innerHTML =
-                    "<p>Głos oddany.</p>";
+                    "<div style='padding: 20px; font-size: 18px; color: #4dff88;'>✅ Twój głos został oddany.</div>";
             }
             function guessWord(src) {
                 const val = document
@@ -722,10 +872,17 @@
                 if (val) socket.emit("guessWord", val);
             }
             function kickPlayer(id) {
-                if (confirm("Wyrzucić?")) socket.emit("kickPlayer", id);
+                showConfirm("Czy na pewno chcesz wyrzucić tego gracza?", () => {
+                    socket.emit("kickPlayer", id);
+                });
             }
             function forceEnd() {
-                if (confirm("Zakończyć?")) socket.emit("forceEndGame");
+                showConfirm(
+                    "Czy na pewno chcesz zakończyć grę dla wszystkich?",
+                    () => {
+                        socket.emit("forceEndGame");
+                    },
+                );
             }
             function resetUI() {
                 document
@@ -740,11 +897,36 @@
             }
 
             socket.on("connect", () => (myId = socket.id));
-            socket.on("errorMsg", alert);
-            socket.on("joinedLobby", () => showScreen("lobby"));
+
+            socket.on("errorMsg", (msg) => {
+                if (msg === "Brak pokoju." || msg === "Złe hasło!") {
+                    showNotification(
+                        "❌ Niepoprawne dane pokoju (zła nazwa lub hasło)",
+                        "error",
+                    );
+                } else if (msg === "Nazwa zajęta!") {
+                    showNotification(
+                        "⚠️ Taka nazwa pokoju już istnieje!",
+                        "error",
+                    );
+                } else if (msg === "Nick zajęty.") {
+                    showNotification(
+                        "⚠️ Ten nick jest już zajęty w tym pokoju.",
+                        "error",
+                    );
+                } else {
+                    showNotification(msg, "error");
+                }
+            });
+
+            socket.on("joinedLobby", () => {
+                showNotification("Dołączono do pokoju!", "success");
+                showScreen("lobby");
+            });
+
             socket.on("kicked", () => {
-                alert("Wyrzucono Cię!");
-                location.reload();
+                showNotification("Zostałeś wyrzucony z pokoju.", "error");
+                setTimeout(() => location.reload(), 2000);
             });
 
             socket.on("updateRoom", (data) => {
@@ -759,7 +941,6 @@
                         "block";
                     document.getElementById("waiting-for-host").style.display =
                         "none";
-
                     const catList = document.getElementById("cat-list");
                     if (
                         data.availableCategories &&
@@ -801,7 +982,6 @@
                 const h = document.getElementById("role-header");
                 const c = document.getElementById("role-content");
                 const g = document.getElementById("game-guess-area");
-
                 document.getElementById("force-end-btn").style.display =
                     data.hostId === myId ? "block" : "none";
 
@@ -839,10 +1019,8 @@
                 const box = document.getElementById("voting-buttons");
                 box.innerHTML = "";
                 document.getElementById("vote-status").innerText = "";
-
                 const vg = document.getElementById("voting-guess-area");
                 vg.style.display = myRole === "impostor" ? "block" : "none";
-
                 players.forEach((p) => {
                     let btn = document.createElement("button");
                     btn.innerHTML = `<div style="display:flex; align-items:center; justify-content:center;"><img src="${getAvatar(p.name)}" style="width:20px; height:20px; border-radius:50%; margin-right:5px;"> ${p.name}</div>`;
@@ -851,8 +1029,23 @@
                 });
             });
 
+            // --- NOWOŚĆ: Wyświetlanie kto nie zagłosował ---
+            socket.on("updateVotingStatus", (pendingNames) => {
+                const statusEl = document.getElementById("vote-status");
+
+                if (pendingNames.length > 0) {
+                    statusEl.innerHTML = `
+                        <span style="color: #aaa; font-size: 14px;">Oczekiwanie na:</span><br>
+                        <span style="color: #e94560; font-weight: bold;">${pendingNames.join(", ")}</span>
+                    `;
+                } else {
+                    statusEl.innerHTML =
+                        "<span style='color: #4dff88'>Wszyscy zagłosowali!</span>";
+                }
+            });
+
             socket.on("guessLocked", (msg) => {
-                alert(msg);
+                showNotification(msg, "error");
                 document
                     .querySelectorAll(".guess-area input, .guess-area button")
                     .forEach((e) => (e.disabled = true));
@@ -878,7 +1071,6 @@
                 document.getElementById("speaker-avatar").src = getAvatar(
                     player.name,
                 );
-
                 if (player.id === myId) {
                     el.innerHTML = `${player.name} (TY)`;
                     document.getElementById("btn-next-turn").style.display =
@@ -894,7 +1086,6 @@
                 showScreen("result");
                 const t = document.getElementById("result-title");
                 const impostorElem = document.getElementById("result-impostor");
-
                 if (d.winner === "CIVILIANS") {
                     t.innerHTML =
                         "<span style='color:#4dff88'>WYGRALI CYWILE</span>";
@@ -904,7 +1095,6 @@
                         "<span style='color:#ff4d4d'>WYGRAŁ IMPOSTOR</span>";
                     impostorElem.innerText = `Impostorem był: ${d.impostorName}`;
                 }
-
                 document.getElementById("result-msg").innerText = d.msg;
                 document.getElementById("result-secret").innerText =
                     d.secretWord;
@@ -915,7 +1105,7 @@
                 document.getElementById("voting-buttons").innerHTML = "";
             });
             socket.on("gameReset", (msg) => {
-                alert(msg);
+                showNotification(msg, "error");
                 showScreen("lobby");
             });
         </script>

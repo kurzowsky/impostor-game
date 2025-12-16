@@ -226,8 +226,16 @@ io.on("connection", (socket) => {
         if (!room || !room.gameState.active) return;
         if (socket.id === room.players[room.gameState.turnIndex].id) {
             room.gameState.turnsCount++;
+
+            // Jeśli koniec rundy -> Start Głosowania
             if (room.gameState.turnsCount >= room.players.length) {
                 io.to(room.name).emit("startVoting", room.players);
+
+                // Wyślij info, że nikt jeszcze nie zagłosował
+                io.to(room.name).emit(
+                    "updateVotingStatus",
+                    room.players.map((p) => p.name),
+                );
             } else {
                 room.gameState.turnIndex =
                     (room.gameState.turnIndex + 1) % room.players.length;
@@ -245,6 +253,13 @@ io.on("connection", (socket) => {
         if (!room || !room.gameState.active) return;
 
         room.gameState.votes[socket.id] = targetId;
+
+        // --- AKTUALIZACJA STATUSU GŁOSOWANIA (KTO JESZCZE NIE GŁOSOWAŁ) ---
+        const pendingPlayers = room.players
+            .filter((p) => !room.gameState.votes[p.id])
+            .map((p) => p.name);
+        io.to(room.name).emit("updateVotingStatus", pendingPlayers);
+        // ------------------------------------------------------------------
 
         const civilians = room.players.filter((p) => p.role === "civilian");
         const allCiviliansVoted = civilians.every(
@@ -300,7 +315,6 @@ io.on("connection", (socket) => {
         }
 
         const ejected = room.players.find((p) => p.id === winner);
-        // const impostor = room.players.find((p) => p.role === "impostor"); // (nieużywane w tej logice, ale zostawiam dla jasności)
 
         if (ejected.role === "impostor")
             finishGame(room, {
@@ -311,18 +325,14 @@ io.on("connection", (socket) => {
         else
             finishGame(room, {
                 winner: "IMPOSTOR",
-                msg: `Wyrzucono niewinnego: ${ejected.name}.`,
+                msg: `Wyrzucono niewinnego (${ejected.name}).`,
                 secretWord: room.gameState.currentWord,
             });
     }
 
-    // --- KONIEC GRY (ZMODYFIKOWANE) ---
     function finishGame(room, data) {
-        // 1. Znajdź impostora, żeby wysłać jego nick
         const impostorPlayer = room.players.find((p) => p.role === "impostor");
         const impostorName = impostorPlayer ? impostorPlayer.name : "Nieznany";
-
-        // 2. Dodaj nick do danych wysyłanych do klientów
         data.impostorName = impostorName;
 
         io.to(room.name).emit("gameOver", data);
@@ -332,27 +342,37 @@ io.on("connection", (socket) => {
                 io.to(room.name).emit("returnToLobby");
                 emitRoomUpdate(room);
             }
-        }, 9000); // 9 sekund
+        }, 9000);
     }
 
+    // --- ROZŁĄCZANIE (Z PRZEKAZANIEM HOSTA) ---
     socket.on("disconnect", () => {
         const roomName = socket.data.roomName;
         if (!roomName || !rooms[roomName]) return;
         const room = rooms[roomName];
+
+        // 1. Usuń gracza
         room.players = room.players.filter((p) => p.id !== socket.id);
         delete room.gameState.votes[socket.id];
 
+        // 2. Jeśli pusto -> usuń pokój
         if (room.players.length === 0) {
             delete rooms[roomName];
             return;
         }
-        if (socket.id === room.hostId) room.hostId = room.players[0].id;
 
+        // 3. JEŚLI WYSZEDŁ HOST -> NOWY HOST
+        if (socket.id === room.hostId) {
+            room.hostId = room.players[0].id; // Pierwszy z listy przejmuje władzę
+        }
+
+        // 4. Jeśli gra trwała i za mało graczy -> Reset
         if (room.gameState.active && room.players.length < 3) {
             resetRoomGame(room);
-            io.to(roomName).emit("gameReset", "Za mało graczy.");
+            io.to(roomName).emit("gameReset", "Za mało graczy. Gra przerwana.");
             io.to(roomName).emit("returnToLobby");
         }
+
         emitRoomUpdate(room);
     });
 });
