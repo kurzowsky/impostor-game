@@ -153,7 +153,9 @@
                 color: #ddd;
             }
 
-            input[type="text"] {
+            /* --- ZMIANA: Dodano obsługę input[type="password"] w stylach --- */
+            input[type="text"],
+            input[type="password"] {
                 width: 100%;
                 padding: 15px;
                 margin-bottom: 10px;
@@ -167,7 +169,8 @@
                 border: 2px solid transparent;
                 transition: 0.3s;
             }
-            input[type="text"]:focus {
+            input[type="text"]:focus,
+            input[type="password"]:focus {
                 border-color: #e94560;
                 background: rgba(0, 0, 0, 0.5);
             }
@@ -425,22 +428,20 @@
                 <input type="text" id="nickname" placeholder="Twój nick..." />
                 <div id="menu-actions">
                     <button onclick="showCreate()">Stwórz Pokój</button>
-                    <button class="secondary-btn" onclick="showJoin()">
-                        Dołącz
-                    </button>
+                    <button onclick="showJoin()">Dołącz do Pokoju</button>
                 </div>
                 <div id="form-create" class="hidden">
                     <input type="text" id="c-name" placeholder="Nazwa Pokoju" />
-                    <input type="text" id="c-pass" placeholder="Hasło" />
-                    <button onclick="createRoom()">Start</button>
+                    <input type="password" id="c-pass" placeholder="Hasło" />
+                    <button onclick="createRoom()">Utwórz Pokój</button>
                     <button class="secondary-btn" onclick="resetMenu()">
                         Wróć
                     </button>
                 </div>
                 <div id="form-join" class="hidden">
                     <input type="text" id="j-name" placeholder="Nazwa Pokoju" />
-                    <input type="text" id="j-pass" placeholder="Hasło" />
-                    <button onclick="joinRoom()">Start</button>
+                    <input type="password" id="j-pass" placeholder="Hasło" />
+                    <button onclick="joinRoom()">Dołącz</button>
                     <button class="secondary-btn" onclick="resetMenu()">
                         Wróć
                     </button>
