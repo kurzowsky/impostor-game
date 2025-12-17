@@ -15,6 +15,11 @@
             rel="stylesheet"
         />
 
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        />
+
         <style>
             * {
                 box-sizing: border-box;
@@ -30,6 +35,11 @@
                 justify-content: center;
                 align-items: center;
                 padding: 20px;
+            }
+
+            /* Odstęp dla ikonek w przyciskach */
+            button i {
+                margin-right: 8px;
             }
 
             /* --- CZAT --- */
@@ -299,11 +309,11 @@
                 transform: translateY(-2px);
             }
             .secondary-btn {
-                background: transparent;
-                border: 2px solid #0f3460;
+                background: rgba(0, 0, 0, 0.3);
+                border: 2px solid #e94560;
             }
             .secondary-btn:hover {
-                background: #0f3460;
+                background: rgba(0, 0, 0, 0.17);
             }
 
             .avatar {
@@ -490,7 +500,7 @@
             #btn-settings {
                 background: #333;
                 margin-bottom: 10px;
-                border: 1px solid #555;
+                border: 2px solid #555;
             }
             #btn-settings:hover {
                 background: #444;
@@ -546,10 +556,16 @@
             <div id="screen-menu" class="screen active">
                 <h1>🕵️ Impostor</h1>
                 <input type="text" id="nickname" placeholder="Twój nick..." />
+
                 <div id="menu-actions">
-                    <button onclick="showCreate()">Stwórz Pokój</button>
-                    <button onclick="showJoin()">Dołącz do Pokoju</button>
+                    <button onclick="showCreate()">
+                        <i class="fa-solid fa-house"></i> Stwórz Pokój
+                    </button>
+                    <button class="secondary-btn" onclick="showJoin()">
+                        <i class="fa-solid fa-door-open"></i> Dołącz do Pokoju
+                    </button>
                 </div>
+
                 <div id="form-create" class="hidden">
                     <input type="text" id="c-name" placeholder="Nazwa Pokoju" />
                     <input
