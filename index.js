@@ -30,6 +30,7 @@ function resetRoomGame(room) {
         votes: {},
         currentWord: "",
         impostorCanGuess: true,
+        hasSentMessage: false, // NOWOŚĆ: Flaga czy wysłano wiadomość w tej turze
     };
     room.players.forEach((p) => (p.role = null));
 }
@@ -61,6 +62,7 @@ io.on("connection", (socket) => {
             name: roomName,
             password: password,
             hostId: socket.id,
+            chatEnabled: false,
             players: [],
             gameState: {},
         };
@@ -106,12 +108,45 @@ io.on("connection", (socket) => {
             roomName: room.name,
             players: room.players,
             hostId: room.hostId,
+            chatEnabled: room.chatEnabled,
             gameActive: room.gameState.active,
             availableCategories: Object.keys(categoriesDB),
         });
     }
 
-    // --- KICK ---
+    // --- ZMIANA USTAWIEŃ (CZAT) ---
+    socket.on("toggleChat", (isEnabled) => {
+        const room = rooms[socket.data.roomName];
+        if (room && room.hostId === socket.id) {
+            room.chatEnabled = isEnabled;
+            emitRoomUpdate(room);
+        }
+    });
+
+    // --- CZAT W GRZE (ZMODYFIKOWANY: LIMIT 1 WIADOMOŚCI) ---
+    socket.on("sendChatMessage", (msg) => {
+        const room = rooms[socket.data.roomName];
+        if (!room || !room.gameState.active || !room.chatEnabled) return;
+
+        const currentPlayer = room.players[room.gameState.turnIndex];
+
+        // 1. Sprawdź czy to tura gracza
+        if (currentPlayer.id !== socket.id) return;
+
+        // 2. Sprawdź czy już coś wysłał
+        if (room.gameState.hasSentMessage) return; // Blokada!
+
+        // 3. Wyślij i zablokuj
+        room.gameState.hasSentMessage = true;
+
+        io.to(room.name).emit("newChatMessage", {
+            author: currentPlayer.name,
+            text: msg,
+        });
+
+        // Nie wywołujemy nextTurn(), gracz musi sam kliknąć przycisk
+    });
+
     socket.on("kickPlayer", (targetId) => {
         const roomName = socket.data.roomName;
         const room = rooms[roomName];
@@ -156,6 +191,7 @@ io.on("connection", (socket) => {
 
         room.gameState.active = true;
         room.gameState.impostorCanGuess = true;
+        room.gameState.hasSentMessage = false; // Reset flagi na start
         room.players = shuffleArray(room.players);
         room.gameState.turnIndex = 0;
         room.gameState.turnsCount = 0;
@@ -172,6 +208,7 @@ io.on("connection", (socket) => {
                 role: role,
                 word: role === "civilian" ? room.gameState.currentWord : null,
                 hostId: room.hostId,
+                chatEnabled: room.chatEnabled,
             });
         });
 
@@ -226,12 +263,10 @@ io.on("connection", (socket) => {
         if (!room || !room.gameState.active) return;
         if (socket.id === room.players[room.gameState.turnIndex].id) {
             room.gameState.turnsCount++;
+            room.gameState.hasSentMessage = false; // Reset flagi przy nowej turze!
 
-            // Jeśli koniec rundy -> Start Głosowania
             if (room.gameState.turnsCount >= room.players.length) {
                 io.to(room.name).emit("startVoting", room.players);
-
-                // Wyślij info, że nikt jeszcze nie zagłosował
                 io.to(room.name).emit(
                     "updateVotingStatus",
                     room.players.map((p) => p.name),
@@ -247,19 +282,16 @@ io.on("connection", (socket) => {
         }
     });
 
-    // --- GŁOSOWANIE ---
     socket.on("vote", (targetId) => {
         const room = rooms[socket.data.roomName];
         if (!room || !room.gameState.active) return;
 
         room.gameState.votes[socket.id] = targetId;
 
-        // --- AKTUALIZACJA STATUSU GŁOSOWANIA (KTO JESZCZE NIE GŁOSOWAŁ) ---
         const pendingPlayers = room.players
             .filter((p) => !room.gameState.votes[p.id])
             .map((p) => p.name);
         io.to(room.name).emit("updateVotingStatus", pendingPlayers);
-        // ------------------------------------------------------------------
 
         const civilians = room.players.filter((p) => p.role === "civilian");
         const allCiviliansVoted = civilians.every(
@@ -301,6 +333,7 @@ io.on("connection", (socket) => {
             io.to(room.name).emit("votingResult", { result: "skip" });
             room.gameState.votes = {};
             room.gameState.turnsCount = 0;
+            room.gameState.hasSentMessage = false;
             room.gameState.turnIndex =
                 (room.gameState.turnIndex + 1) % room.players.length;
             room.gameState.impostorCanGuess = true;
@@ -332,8 +365,12 @@ io.on("connection", (socket) => {
 
     function finishGame(room, data) {
         const impostorPlayer = room.players.find((p) => p.role === "impostor");
-        const impostorName = impostorPlayer ? impostorPlayer.name : "Nieznany";
-        data.impostorName = impostorName;
+        const impostorName = impostorPlayer
+            ? impostorPlayer.name
+            : "Nieznany (Uciekł)";
+        if (!data.impostorName) {
+            data.impostorName = impostorName;
+        }
 
         io.to(room.name).emit("gameOver", data);
         setTimeout(() => {
@@ -345,28 +382,46 @@ io.on("connection", (socket) => {
         }, 9000);
     }
 
-    // --- ROZŁĄCZANIE (Z PRZEKAZANIEM HOSTA) ---
     socket.on("disconnect", () => {
         const roomName = socket.data.roomName;
         if (!roomName || !rooms[roomName]) return;
         const room = rooms[roomName];
 
-        // 1. Usuń gracza
+        const leavingPlayer = room.players.find((p) => p.id === socket.id);
+        if (!leavingPlayer) return;
+
         room.players = room.players.filter((p) => p.id !== socket.id);
         delete room.gameState.votes[socket.id];
 
-        // 2. Jeśli pusto -> usuń pokój
         if (room.players.length === 0) {
             delete rooms[roomName];
             return;
         }
 
-        // 3. JEŚLI WYSZEDŁ HOST -> NOWY HOST
-        if (socket.id === room.hostId) {
-            room.hostId = room.players[0].id; // Pierwszy z listy przejmuje władzę
+        if (room.gameState.active) {
+            if (leavingPlayer.role === "impostor") {
+                finishGame(room, {
+                    winner: "CIVILIANS",
+                    msg: `Impostor (${leavingPlayer.name}) uciekł z gry!`,
+                    secretWord: room.gameState.currentWord,
+                    impostorName: leavingPlayer.name,
+                });
+                return;
+            }
+
+            if (room.gameState.turnIndex >= room.players.length) {
+                room.gameState.turnIndex = 0;
+            }
+            io.to(room.name).emit(
+                "updateTurn",
+                room.players[room.gameState.turnIndex],
+            );
         }
 
-        // 4. Jeśli gra trwała i za mało graczy -> Reset
+        if (socket.id === room.hostId) {
+            room.hostId = room.players[0].id;
+        }
+
         if (room.gameState.active && room.players.length < 3) {
             resetRoomGame(room);
             io.to(roomName).emit("gameReset", "Za mało graczy. Gra przerwana.");

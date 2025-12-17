@@ -32,6 +32,45 @@
                 padding: 20px;
             }
 
+            /* --- CZAT --- */
+            #chat-container {
+                margin-top: 15px;
+                background: rgba(0, 0, 0, 0.4);
+                padding: 10px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                display: none;
+            }
+            #chat-messages {
+                height: 150px;
+                overflow-y: auto;
+                text-align: left;
+                margin-bottom: 10px;
+                font-size: 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                scrollbar-width: thin;
+            }
+            .chat-msg {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 5px 10px;
+                border-radius: 5px;
+                word-wrap: break-word;
+            }
+            .chat-msg strong {
+                color: #e94560;
+            }
+            #chat-input {
+                font-size: 14px;
+                padding: 10px;
+            }
+            #chat-input:disabled {
+                background: rgba(0, 0, 0, 0.6);
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+
             /* --- STOPKA Z AUTOREM --- */
             .footer-credits {
                 position: fixed;
@@ -49,7 +88,7 @@
                 font-weight: 600;
             }
 
-            /* --- SYSTEM POWIADOMIEŃ (TOASTY) --- */
+            /* --- TOASTY --- */
             #notification-container {
                 position: fixed;
                 top: 20px;
@@ -103,7 +142,7 @@
                 }
             }
 
-            /* --- STYL IKOΝKI POMOCY (?) --- */
+            /* --- POMOC --- */
             .help-container {
                 position: fixed;
                 top: 20px;
@@ -492,7 +531,7 @@
                     </li>
                     <li>
                         <strong>Tury:</strong> Gracze po kolei opowiadają o
-                        haśle.
+                        haśle (lub piszą na czacie, jeśli włączony).
                     </li>
                     <li>
                         <strong>Koniec:</strong> Gra kończy się głosowaniem
@@ -601,6 +640,17 @@
                     </button>
                 </div>
 
+                <div id="chat-container">
+                    <div id="chat-messages"></div>
+                    <input
+                        type="text"
+                        id="chat-input"
+                        placeholder="Wpisz wiadomość (tylko w twojej turze)..."
+                        disabled
+                        onkeydown="handleChatKey(event)"
+                    />
+                </div>
+
                 <div id="game-guess-area" class="guess-area">
                     <input
                         type="text"
@@ -683,8 +733,28 @@
                     >&times;</span
                 >
                 <h3 style="color: #e94560; margin-bottom: 20px">
-                    Wybierz Kategorie
+                    Ustawienia Gry
                 </h3>
+
+                <div class="switch-container">
+                    <span class="cat-label">💬 Włącz Czat w grze</span>
+                    <label class="switch">
+                        <input
+                            type="checkbox"
+                            id="setting-chat-toggle"
+                            onchange="toggleChatSetting()"
+                        />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <hr
+                    style="
+                        border: 0;
+                        border-top: 1px solid rgba(255, 255, 255, 0.1);
+                        margin: 15px 0;
+                    "
+                />
+                <h4 style="color: #ddd; margin-bottom: 10px">Kategorie:</h4>
                 <div id="cat-list"></div>
                 <button onclick="closeSettings()" style="margin-top: 20px">
                     Zapisz i Zamknij
@@ -727,6 +797,7 @@
             let myId = null;
             let myRole = null;
             let pendingConfirmAction = null;
+            let chatEnabledGlobal = false;
 
             function showNotification(msg, type = "error") {
                 const container = document.getElementById(
@@ -852,12 +923,34 @@
                 socket.emit("startGame", selected);
             }
 
+            // --- CHAT FUNCTIONS ---
+            function toggleChatSetting() {
+                const isChecked = document.getElementById(
+                    "setting-chat-toggle",
+                ).checked;
+                socket.emit("toggleChat", isChecked);
+            }
+
+            function handleChatKey(e) {
+                if (e.key === "Enter") {
+                    const input = document.getElementById("chat-input");
+                    const msg = input.value.trim();
+                    if (msg) {
+                        socket.emit("sendChatMessage", msg);
+                        input.value = "";
+                        // Blokada od razu po wysłaniu (UI feedback)
+                        input.disabled = true;
+                        input.placeholder =
+                            "Wiadomość wysłana. Kliknij KONIEC TURY";
+                    }
+                }
+            }
+
             function nextTurn() {
                 socket.emit("nextTurn");
             }
             function sendVote(id) {
                 socket.emit("vote", id);
-                // Ukryj przyciski, ale zostaw status widoczny
                 document.getElementById("voting-buttons").innerHTML =
                     "<div style='padding: 20px; font-size: 18px; color: #4dff88;'>✅ Twój głos został oddany.</div>";
             }
@@ -894,6 +987,9 @@
                         p.innerText = "Błąd = Przegrana!";
                         p.style.color = "#aaa";
                     });
+                // Reset chatu
+                document.getElementById("chat-messages").innerHTML = "";
+                document.getElementById("chat-input").disabled = true;
             }
 
             socket.on("connect", () => (myId = socket.id));
@@ -935,6 +1031,12 @@
                 const list = document.getElementById("player-list");
                 list.innerHTML = "";
                 const isHost = data.hostId === myId;
+
+                // Aktualizacja przełącznika czatu w ustawieniach
+                document.getElementById("setting-chat-toggle").checked =
+                    data.chatEnabled;
+                document.getElementById("setting-chat-toggle").disabled =
+                    !isHost; // Tylko host może zmieniać
 
                 if (isHost && !data.gameActive) {
                     document.getElementById("host-buttons").style.display =
@@ -979,6 +1081,12 @@
                 showScreen("game");
                 resetUI();
                 myRole = data.role;
+                chatEnabledGlobal = data.chatEnabled;
+
+                // Pokaż lub ukryj czat
+                document.getElementById("chat-container").style.display =
+                    chatEnabledGlobal ? "block" : "none";
+
                 const h = document.getElementById("role-header");
                 const c = document.getElementById("role-content");
                 const g = document.getElementById("game-guess-area");
@@ -998,24 +1106,50 @@
                 }
             });
 
+            socket.on("newChatMessage", (data) => {
+                const box = document.getElementById("chat-messages");
+                const div = document.createElement("div");
+                div.className = "chat-msg";
+                div.innerHTML = `<strong>${data.author}:</strong> ${data.text}`;
+                box.appendChild(div);
+                box.scrollTop = box.scrollHeight;
+            });
+
             socket.on("updateTurn", (p) => {
                 const el = document.getElementById("speaker-name");
                 document.getElementById("speaker-avatar").src = getAvatar(
                     p.name,
                 );
+
+                // Obsługa Inputu Czat
+                const chatInput = document.getElementById("chat-input");
+
                 if (p.id === myId) {
                     el.innerHTML = `${p.name} (TY)`;
                     document.getElementById("btn-next-turn").style.display =
                         "block";
+                    // Odblokuj czat tylko jeśli jest włączony globalnie
+                    if (chatEnabledGlobal) {
+                        chatInput.disabled = false;
+                        chatInput.placeholder = "Twoja tura! Napisz coś...";
+                        chatInput.focus();
+                    }
                 } else {
                     el.innerHTML = p.name;
                     document.getElementById("btn-next-turn").style.display =
                         "none";
+                    // Zablokuj czat
+                    chatInput.disabled = true;
+                    chatInput.placeholder = "Czekaj na swoją turę...";
                 }
             });
 
             socket.on("startVoting", (players) => {
                 showScreen("voting");
+                // Ukryj czat podczas głosowania
+                document.getElementById("chat-container").style.display =
+                    "none";
+
                 const box = document.getElementById("voting-buttons");
                 box.innerHTML = "";
                 document.getElementById("vote-status").innerText = "";
@@ -1029,10 +1163,8 @@
                 });
             });
 
-            // --- NOWOŚĆ: Wyświetlanie kto nie zagłosował ---
             socket.on("updateVotingStatus", (pendingNames) => {
                 const statusEl = document.getElementById("vote-status");
-
                 if (pendingNames.length > 0) {
                     statusEl.innerHTML = `
                         <span style="color: #aaa; font-size: 14px;">Oczekiwanie na:</span><br>
@@ -1067,18 +1199,31 @@
 
             socket.on("resumeGame", (player) => {
                 showScreen("game");
+                // Przywróć czat jeśli włączony
+                document.getElementById("chat-container").style.display =
+                    chatEnabledGlobal ? "block" : "none";
+
                 const el = document.getElementById("speaker-name");
                 document.getElementById("speaker-avatar").src = getAvatar(
                     player.name,
                 );
+
+                const chatInput = document.getElementById("chat-input");
+
                 if (player.id === myId) {
                     el.innerHTML = `${player.name} (TY)`;
                     document.getElementById("btn-next-turn").style.display =
                         "block";
+                    if (chatEnabledGlobal) {
+                        chatInput.disabled = false;
+                        chatInput.placeholder = "Twoja tura! Napisz coś...";
+                    }
                 } else {
                     el.innerHTML = player.name;
                     document.getElementById("btn-next-turn").style.display =
                         "none";
+                    chatInput.disabled = true;
+                    chatInput.placeholder = "Czekaj na swoją turę...";
                 }
             });
 
